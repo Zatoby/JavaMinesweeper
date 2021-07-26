@@ -5,19 +5,19 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.stage.Stage;
 
 import java.util.Map;
-import java.util.TreeMap;
 
 public class Generation {
-    private Game game;
-    private Controller controller;
-    private int[][] intMap;
-    private int rowLength;
-    private int colLength;
-    private Button[][] b;
-    private Map<String, String> style;
+    private final Game game;
+    private final Controller controller;
+    private final int[][] intMap;
+    private final int rowLength;
+    private final int colLength;
+    private final Button[][] b;
+    private final Map<String, String> style;
+
+    private boolean isGenerating = false;
 
 
     /**
@@ -37,26 +37,17 @@ public class Generation {
 
     /**
      * generates a map only for visual purposes
-     * @param gridPane
-     * @param stage
      */
-    public void generateGenerationMap(GridPane gridPane, Stage stage) {
+    public void generateGenerationMap(GridPane gridPane) {
         for (int row = 0; row < game.intMap.length; row++) {
             for (int col = 0; col < game.intMap[row].length; col++) {
                 b[row][col] = new Button();
                 Button currBut = b[row][col];
                 switch (game.difficultyString) {
-                    case "Easy":
-                        currBut.setMinSize(Integer.parseInt(style.get("Button Size Easy")), Integer.parseInt(style.get("Button Size Easy")));
-                        break;
-                    case "Medium":
-                        currBut.setMinSize(Integer.parseInt(style.get("Button Size Medium")), Integer.parseInt(style.get("Button Size Medium")));
-                        break;
-                    case "Hard":
-                        currBut.setMinSize(Integer.parseInt(style.get("Button Size Hard")), Integer.parseInt(style.get("Button Size Hard")));
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Error at " + game.difficultyString + " illegal difficulty.");
+                    case "Easy" -> currBut.setMinSize(Integer.parseInt(style.get("Button Size Easy")), Integer.parseInt(style.get("Button Size Easy")));
+                    case "Medium" -> currBut.setMinSize(Integer.parseInt(style.get("Button Size Medium")), Integer.parseInt(style.get("Button Size Medium")));
+                    case "Hard" -> currBut.setMinSize(Integer.parseInt(style.get("Button Size Hard")), Integer.parseInt(style.get("Button Size Hard")));
+                    default -> throw new IllegalArgumentException("Error at " + game.difficultyString + " illegal difficulty.");
                 }
 
                 if ((row+col) % 2 == 0) {
@@ -68,7 +59,7 @@ public class Generation {
                 int finalRow = row;
                 int finalCol = col;
 
-                currBut.setOnMouseClicked(e -> generateIntMap(gridPane, stage, finalRow, finalCol));
+                currBut.setOnMouseClicked(e -> generateIntMap(gridPane, finalRow, finalCol));
                 gridPane.add(currBut, col, row);
             }
         }
@@ -76,8 +67,6 @@ public class Generation {
 
     /**
      * makes sure that the button is a 0
-     * @param randRow
-     * @param randCol
      * @param safeRow row that has to be safe
      * @param safeCol collum that has to be safe
      * @return if the button is safe
@@ -95,19 +84,19 @@ public class Generation {
         if (randRow == top)
             if (cols) return false;
         if (randRow == bottom)
-            if (cols) return false;
+            return !cols;
 
         return true;
     }
 
     /**
      * generates the back end map
-     * @param gridPane
-     * @param stage
-     * @param safeRow
-     * @param safeCol
      */
-    public void generateIntMap(GridPane gridPane, Stage stage, int safeRow, int safeCol) {
+    public void generateIntMap(GridPane gridPane, int safeRow, int safeCol) {
+        //used to prevent a bug that broke the game
+        if (isGenerating) return;
+        isGenerating = true;
+
         game.timeline.play();
 
         while (game.bombCounter != game.bombNum) {
@@ -121,10 +110,10 @@ public class Generation {
         }
 
         //outputs intmap for debuging purposes
-        for (int row = 0; row < intMap.length; row++) {
+        for (int[] ints : intMap) {
             System.out.println();
-            for (int col = 0; col < intMap[row].length; col++) {
-                System.out.print(intMap[row][col] + "  ");
+            for (int anInt : ints) {
+                System.out.print(anInt + "  ");
             }
         }
 
@@ -140,9 +129,7 @@ public class Generation {
     }
 
     /**
-     * adds the how many bombs are around the button
-     * @param row 
-     * @param col
+     * adds the number that indicates how many bombs are around the button
      */
     public void addNums(int row, int col) {
         game.bombCounter++;
@@ -162,23 +149,23 @@ public class Generation {
         if (top >= 0 && intMap[top][col] != -1) intMap[top][col]++; //top
     }
 
+    /**
+     * Generates the buttons and makes them interactive
+     */
     public void generateButtonMap(GridPane gridPane) {
         for (int row = 0; row < intMap.length; row++) {
             for (int col = 0; col < intMap[row].length; col++) {
                 b[row][col] = new Button();
                 Button currBut = b[row][col];
+
                 switch (game.difficultyString) {
-                    case "Easy":
-                        currBut.setMinSize(Integer.parseInt(style.get("Button Size Easy")), Integer.parseInt(style.get("Button Size Easy")));
-                        break;
-                    case "Medium":
-                        currBut.setMinSize(Integer.parseInt(style.get("Button Size Medium")), Integer.parseInt(style.get("Button Size Medium")));
-                        break;
-                    case "Hard":
-                        currBut.setMinSize(Integer.parseInt(style.get("Button Size Hard")), Integer.parseInt(style.get("Button Size Hard")));
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Error at " + game.difficultyString + " illegal difficulty.");
+                    case "Easy" -> currBut.setMinSize(Integer.parseInt(style.get("Button Size Easy")),
+                            Integer.parseInt(style.get("Button Size Easy")));
+                    case "Medium" -> currBut.setMinSize(Integer.parseInt(style.get("Button Size Medium")),
+                            Integer.parseInt(style.get("Button Size Medium")));
+                    case "Hard" -> currBut.setMinSize(Integer.parseInt(style.get("Button Size Hard")),
+                            Integer.parseInt(style.get("Button Size Hard")));
+                    default -> throw new IllegalArgumentException("Error at " + game.difficultyString + " illegal difficulty.");
                 }
 
                 if ((row+col) % 2 == 0) {
@@ -191,10 +178,8 @@ public class Generation {
                 int finalCol = col;
                 currBut.addEventFilter(MouseEvent.MOUSE_PRESSED, e -> controller.gameController(b[finalRow][finalCol], finalRow, finalCol, e));
 
-
                 gridPane.add(currBut, col, row);
             }
         }
     }
-
 }

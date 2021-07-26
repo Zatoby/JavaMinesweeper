@@ -1,0 +1,40 @@
+#1
+#1976d2
+#2
+#388e3c
+#3
+#d32f2f
+#4
+#7b1fa2
+#5
+#ff8f00
+#6
+#008081
+#7
+#424242
+#8
+#808080
+#Button 1
+-fx-background-radius: 0; -fx-background-color: rgb(18.888888888888896,17.539683183034263,18.888888245537164)
+#Button 1 Clicked
+-fx-background-radius: 0; -fx-background-color: rgb(8.095242437862213,6.7460323089645,10.793652080354235)
+#Button 2
+-fx-background-radius: 0; -fx-background-color: rgb(37.77778035118466,21.587300300598145,37.77777649107433)
+#Button 2 Clicked
+-fx-background-radius: 0; -fx-background-color: rgb(13.492061240332468,8.095238095238095,22.59493670886076)
+#Button Size Easy
+40
+#Button Size Hard
+30
+#Button Size Medium
+30
+#Control Pane Background
+-fx-background-color: rgb(5.3968260401771175,12.142856901600247,10.793651115326655)
+#easy Icon
+pics/difficulty/easy.png
+#hard Icon
+pics/difficulty/hard.png
+#medium Icon
+pics/difficulty/medium.png
+#restart Icon
+restart.png

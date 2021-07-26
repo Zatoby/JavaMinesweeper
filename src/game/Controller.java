@@ -15,24 +15,36 @@ import javafx.util.Duration;
 
 import java.io.File;
 import java.util.Map;
+import java.util.Objects;
 
+/**
+ * Controller class, used to control the game logic
+ * @author Tobias Hernandez Perez
+ */
 public class Controller {
-    private Game game;
-    private int[][] intMap;
-    private boolean[][] clicked;
-    private Button[][] b;
+    /**
+     * defines the game
+     */
+    private final Game game;
 
-    private int rowLength;
-    private int colLength;
+
+    private final int[][] intMap;
+    private final boolean[][] clicked;
+    private final boolean[][] isFlag;
+    private final Button[][] b;
+
+    private final int rowLength;
+    private final int colLength;
     private int flags;
-    private int bombNum;
+    private final int bombNum;
 
-    private Label bombsLeftText;
+    private final Label bombsLeftText;
+    ImageView flagImgView;
 
-    private Map<String, String> style;
+    private final Map<String, String> style;
 
-    //String clickSound = "resources/test.wav";
-    Media clickMedia;
+    MediaPlayer clickPlayer;
+
 
     /**
      * constructor to use the class from the game class
@@ -49,9 +61,13 @@ public class Controller {
         this.bombsLeftText = game.bombsLeftText;
         this.b = game.b;
         this.style = game.style;
+        this.isFlag = new boolean[rowLength][colLength];
 
-        String clickSound = "resources/click.wav";
-        clickMedia = new Media(new File(clickSound).toURI().toString());
+        String clickSound = "./resources/click.wav";
+        //System.out.println(new File(clickSound).toURI().toString());
+        //String clickSound = "resources/test.wav";
+        Media clickMedia = new Media(new File(clickSound).toURI().toString());
+        clickPlayer = new MediaPlayer(clickMedia);
     }
 
     /**
@@ -65,10 +81,10 @@ public class Controller {
         MouseButton mouse = e.getButton();
         int buttonNum = intMap[row][col];
 
-        if (!game.isAlive || (clickedButton.getText().equals("F") && mouse==MouseButton.PRIMARY)) return;
+        if (!game.isAlive || (isFlag[row][col] && mouse!=MouseButton.SECONDARY)) return;
 
 
-        if ((clicked[row][col] && !clickedButton.getText().equals("F") && intMap[row][col]!=0 && mouse==MouseButton.MIDDLE)
+        if ((clicked[row][col] && !isFlag[row][col] && intMap[row][col]!=0 && mouse==MouseButton.MIDDLE)
                 || (e.isPrimaryButtonDown() && e.isSecondaryButtonDown())) {
             showButtonMiddleMouse(row, col);
             return;
@@ -76,7 +92,7 @@ public class Controller {
 
         if (placeFlag(clickedButton, mouse, row, col)) return;
 
-        if (!clicked[row][col] && !clickedButton.getText().equals("F") && mouse==MouseButton.PRIMARY) {
+        if (!clicked[row][col] && !isFlag[row][col] && mouse==MouseButton.PRIMARY) {
             showClickedButton(clickedButton, row, col, buttonNum);
         }
     }
@@ -91,30 +107,27 @@ public class Controller {
      * @param buttonNum how many bombs are around the button
      */
     public void showClickedButton(Button clickedButton, int row, int col, int buttonNum) {
-        MediaPlayer mediaPlayer = new MediaPlayer(clickMedia);
-        /*
-        mediaPlayer.setVolume(10);
-        mediaPlayer.play();
-        mediaPlayer.seek(Duration.millis(0));
-         */
+        //clickPlayer.setVolume(game.settings.volumeSlider.getValue());
+        //clickPlayer.play();
+        //clickPlayer.seek(Duration.millis(0));
 
         if (buttonNum != -1) game.clickedButtons++;
         clicked[row][col] = true;
-
 
         int right = col+1;
         int left = col-1;
         int bot = row+1;
         int top = row-1;
+
         if (intMap[row][col] == 0) {
-            if (right < colLength && !clicked[row][right] && !b[row][right].getText().equals("F")) showClickedButton(b[row][right], row, right, intMap[row][right]);
-            if (left >= 0 && !clicked[row][left] && !b[row][left].getText().equals("F")) showClickedButton(b[row][left], row, left, intMap[row][left]);
-            if (top >= 0 && !clicked[top][col] && !b[top][col].getText().equals("F")) showClickedButton(b[top][col], top, col, intMap[top][col]);
-            if (bot < rowLength && !clicked[bot][col] && !b[bot][col].getText().equals("F")) showClickedButton(b[bot][col], bot, col, intMap[bot][col]);
-            if (top >= 0 && right < colLength && !clicked[top][right] && !b[top][right].getText().equals("F")) showClickedButton(b[top][right], top, right, intMap[top][right]);
-            if (top >= 0 && left >= 0 && !clicked[top][left] && !b[top][left].getText().equals("F")) showClickedButton(b[top][left], top, left, intMap[top][left]);
-            if (bot < rowLength && right < colLength && !clicked[bot][right] && !b[bot][right].getText().equals("F")) showClickedButton(b[bot][right], bot, right, intMap[bot][right]);
-            if (bot < rowLength && left >= 0 && !clicked[bot][left] && !b[bot][left].getText().equals("F")) showClickedButton(b[bot][left], bot, left, intMap[bot][left]);
+            if (right < colLength && !clicked[row][right] && !isFlag[row][right]) showClickedButton(b[row][right], row, right, intMap[row][right]);
+            if (left >= 0 && !clicked[row][left] && !isFlag[row][left]) showClickedButton(b[row][left], row, left, intMap[row][left]);
+            if (top >= 0 && !clicked[top][col] && !isFlag[top][col]) showClickedButton(b[top][col], top, col, intMap[top][col]);
+            if (bot < rowLength && !clicked[bot][col] && !isFlag[bot][col]) showClickedButton(b[bot][col], bot, col, intMap[bot][col]);
+            if (top >= 0 && right < colLength && !clicked[top][right] && !isFlag[top][right]) showClickedButton(b[top][right], top, right, intMap[top][right]);
+            if (top >= 0 && left >= 0 && !clicked[top][left] && !isFlag[top][left]) showClickedButton(b[top][left], top, left, intMap[top][left]);
+            if (bot < rowLength && right < colLength && !clicked[bot][right] && !isFlag[bot][right]) showClickedButton(b[bot][right], bot, right, intMap[bot][right]);
+            if (bot < rowLength && left >= 0 && !clicked[bot][left] && !isFlag[bot][left]) showClickedButton(b[bot][left], bot, left, intMap[bot][left]);
         }
 
         int size = Integer.parseInt(style.get("Button Size " + game.difficultyString))/2;
@@ -174,67 +187,27 @@ public class Controller {
         int top = row-1;
         int surroundingFlags = 0;
 
-        if (right < colLength && b[row][right].getText().equals("F")) surroundingFlags++;
-        if (left >= 0 && b[row][left].getText().equals("F")) surroundingFlags++;
-        if (top >= 0 && b[top][col].getText().equals("F")) surroundingFlags++;
-        if (bot < rowLength && b[bot][col].getText().equals("F")) surroundingFlags++;
-        if (top >= 0 && right < colLength && b[top][right].getText().equals("F")) surroundingFlags++;
-        if (top >= 0 && left >= 0 && b[top][left].getText().equals("F")) surroundingFlags++;
-        if (bot < rowLength && right < colLength && b[bot][right].getText().equals("F")) surroundingFlags++;
-        if (bot < rowLength && left >= 0 && b[bot][left].getText().equals("F")) surroundingFlags++;
+
+        if (right < colLength && isFlag[row][right]) surroundingFlags++;
+        if (left >= 0 && isFlag[row][left]) surroundingFlags++;
+        if (top >= 0 && isFlag[top][col]) surroundingFlags++;
+        if (bot < rowLength && isFlag[bot][col]) surroundingFlags++;
+        if (top >= 0 && right < colLength && isFlag[top][right]) surroundingFlags++;
+        if (top >= 0 && left >= 0 && isFlag[top][left]) surroundingFlags++;
+        if (bot < rowLength && right < colLength && isFlag[bot][right]) surroundingFlags++;
+        if (bot < rowLength && left >= 0 && isFlag[bot][left]) surroundingFlags++;
+
 
         if (intMap[row][col] == surroundingFlags){
-            if (right < colLength && !clicked[row][right] && !b[row][right].getText().equals("F")) showClickedButton(b[row][right], row, right, intMap[row][right]);
-            if (left >= 0 && !clicked[row][left] && !b[row][left].getText().equals("F")) showClickedButton(b[row][left], row, left, intMap[row][left]);
-            if (top >= 0 && !clicked[top][col] && !b[top][col].getText().equals("F")) showClickedButton(b[top][col], top, col, intMap[top][col]);
-            if (bot < rowLength && !clicked[bot][col] && !b[bot][col].getText().equals("F")) showClickedButton(b[bot][col], bot, col, intMap[bot][col]);
-            if (top >= 0 && right < colLength && !clicked[top][right] && !b[top][right].getText().equals("F")) showClickedButton(b[top][right], top, right, intMap[top][right]);
-            if (top >= 0 && left >= 0 && !clicked[top][left] && !b[top][left].getText().equals("F")) showClickedButton(b[top][left], top, left, intMap[top][left]);
-            if (bot < rowLength && right < colLength && !clicked[bot][right] && !b[bot][right].getText().equals("F")) showClickedButton(b[bot][right], bot, right, intMap[bot][right]);
-            if (bot < rowLength && left >= 0 && !clicked[bot][left] && !b[bot][left].getText().equals("F")) showClickedButton(b[bot][left], bot, left, intMap[bot][left]);
+            if (right < colLength && !clicked[row][right] && !isFlag[row][right]) showClickedButton(b[row][right], row, right, intMap[row][right]);
+            if (left >= 0 && !clicked[row][left] && !isFlag[row][left]) showClickedButton(b[row][left], row, left, intMap[row][left]);
+            if (top >= 0 && !clicked[top][col] && !isFlag[top][col]) showClickedButton(b[top][col], top, col, intMap[top][col]);
+            if (bot < rowLength && !clicked[bot][col] && !isFlag[bot][col]) showClickedButton(b[bot][col], bot, col, intMap[bot][col]);
+            if (top >= 0 && right < colLength && !clicked[top][right] && !isFlag[top][right]) showClickedButton(b[top][right], top, right, intMap[top][right]);
+            if (top >= 0 && left >= 0 && !clicked[top][left] && !isFlag[top][left]) showClickedButton(b[top][left], top, left, intMap[top][left]);
+            if (bot < rowLength && right < colLength && !clicked[bot][right] && !isFlag[bot][right]) showClickedButton(b[bot][right], bot, right, intMap[bot][right]);
+            if (bot < rowLength && left >= 0 && !clicked[bot][left] && !isFlag[bot][left]) showClickedButton(b[bot][left], bot, left, intMap[bot][left]);
         }
-    }
-
-    /**
-     * currently unused
-     * @param row
-     * @param col
-     * @return
-     */
-    public Button[] getSurroundingTiles(int row, int col) {
-        Button[] surroundings = new Button[8];
-
-        int right = col+1;
-        int left = col-1;
-        int bot = row+1;
-        int top = row-1;
-
-        if (right < colLength &&
-                !clicked[row][right] && !b[row][right].getText().equals("F"))
-            surroundings[0]=b[row][right];
-        if (left >= 0 &&
-                !clicked[row][left] && !b[row][left].getText().equals("F"))
-            surroundings[1]=b[row][left];
-        if (top >= 0 &&
-                !clicked[top][col] && !b[top][col].getText().equals("F"))
-            surroundings[2]=b[top][col];
-        if (bot < rowLength &&
-                !clicked[bot][col] && !b[bot][col].getText().equals("F"))
-            surroundings[3]=b[bot][col];
-        if (top >= 0 && right < colLength &&
-                !clicked[top][right] && !b[top][right].getText().equals("F"))
-            surroundings[4]=b[top][right];
-        if (top >= 0 && left >= 0 &&
-                !clicked[top][left] && !b[top][left].getText().equals("F"))
-            surroundings[5]=b[top][left];
-        if (bot < rowLength && right < colLength &&
-                !clicked[bot][right] && !b[bot][right].getText().equals("F"))
-            surroundings[6]=b[bot][right];
-        if (bot < rowLength && left >= 0 &&
-                !clicked[bot][left] && !b[bot][left].getText().equals("F"))
-            surroundings[7]=b[bot][left];
-
-        return surroundings;
     }
 
     /**
@@ -243,25 +216,24 @@ public class Controller {
      * @param button mouse button that was used
      * @param row what row the button is in
      * @param col what collum the button is in
-     * @return
      */
     public boolean placeFlag(Button clickedButton, MouseButton button, int row, int col) {
-        Image flagImg = new Image(getClass().getResourceAsStream("pics/flag.png"));
-        ImageView flagImgView = new ImageView(flagImg);
+        Image flagImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/flag.png")));
+        flagImgView = new ImageView(flagImg);
         int size = Integer.parseInt(style.get("Button Size " + game.difficultyString))/2;
         flagImgView.setFitWidth(size);
         flagImgView.setFitHeight(size);
 
         if(button==MouseButton.SECONDARY) {
-            if (clickedButton.getText().equals("F")) {
+            if (isFlag[row][col]) {
                 flags--;
-                clickedButton.setText("");
+                isFlag[row][col]=false;
                 clickedButton.setGraphic(null);
                 bombsLeftText.setText("" + (bombNum-flags));
             } else if (!clicked[row][col]){
                 flags++;
                 clickedButton.setGraphic(flagImgView);
-                clickedButton.setText("F");
+                isFlag[row][col]=true;
                 clickedButton.setFont(Font.font("Roboto", FontWeight.BOLD, size));
                 bombsLeftText.setText("" + (bombNum-flags));
                 //bombsLeft.setText(""+(bombNum-flags));

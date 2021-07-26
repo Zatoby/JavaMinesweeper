@@ -5,12 +5,9 @@ package game;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -21,8 +18,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Polygon;
@@ -33,50 +30,147 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.io.*;
-import java.nio.charset.Charset;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.Map.Entry;
 
+/**
+ * Main class
+ * starts the game and initializes the other classes
+ *
+ * @author Tobias Hernandez Perez
+ */
 public class Game extends Application {
+    /**
+     * path to the style file
+     */
+    private final Path file = Paths.get("resources/style.txt");
+    /**
+     * minutes seconds and milliseconds
+     * (currently only secs are being used)
+     */
+    private final int mins = 0;
+    private final int millis = 0;
+    /**
+     * Defines a controller class
+     */
     public Controller controller;
+    /**
+     * Defines a settings class
+     */
+    public Settings settings;
+    /**
+     * Initializes a new difficulty class
+     */
     public Difficulty difficulty = new Difficulty(this);
-
-    BorderPane controlPane = new BorderPane();
-
+    /**
+     * the number of rows the board has
+     */
     public int rowLength;
+    /**
+     * the number of columns the board has
+     */
     public int colLength;
-
-    int sceneWidth;
-    int sceneHeight;
-
+    /**
+     * two dimensional array containing the buttons of the board
+     */
     public Button[][] b;
+    /**
+     * two dimensional array containing the bombs and corresponding integers around then
+     */
     public int[][] intMap;
+    /**
+     * two dimensional array containing whether or not a tile has been clicked or not
+     */
     public boolean[][] clickedMap;
 
+    /**
+     * amount of bombs on board
+     */
     public int bombNum;
+    /**
+     * amount of bombs left
+     */
     public int bombCounter = 0;
+    /**
+     * amount of clicked buttons
+     */
     public int clickedButtons = 0;
+    /**
+     * amount of placed flags
+     */
     public int flags = 0;
+
+    /**
+     * if the player is currently alive or not
+     */
     public boolean isAlive = true;
+    /**
+     * whether the settings menu is open or not
+     */
     public boolean isInSettings = false;
-
-    String difficultyString = "Easy";
-    Path file = Paths.get("resources/style.txt");
+    /**
+     * string map containing the color information of the game
+     */
     public Map<String, String> style = new TreeMap<>();
-    private BufferedReader in;
-    public BufferedWriter out;
-    private String line;
-
+    /**
+     * amount of bombs left as label
+     */
     public Label bombsLeftText;
-
+    /**
+     * timer icon
+     */
+    public ImageView timerImgView;
+    /**
+     * initializes win stage
+     */
+    public Stage winStage = new Stage();
+    /**
+     * control/top pane where you can choose the difficulty, see your time etc.
+     */
+    BorderPane controlPane = new BorderPane();
+    /**
+     * the difficulty of the game as string
+     */
+    String difficultyString = "Easy";
+    /**
+     * timer as text
+     */
     Text timer;
+    /**
+     * timer timeline
+     */
     Timeline timeline;
-    int mins = 0, secs = 0, millis = 0;
+    /**
+     * root stage
+     */
+    Stage mainStage;
+    /**
+     * the width of the game window
+     */
+    private int sceneWidth;
+    /**
+     * the height of the game window
+     */
+    private int sceneHeight;
+    private int secs = 1;
+    /**
+     * high score of current difficulty as integer
+     */
+    private int highscore;
 
-    int highscore;
+    /**
+     * launches the game
+     */
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     /**
      * Starts an easy map
@@ -102,13 +196,14 @@ public class Game extends Application {
         start(new Stage());
     }
 
-
     /**
      * Starts the program
+     *
      * @param stage the interface
      */
     @Override
     public void start(Stage stage) {
+        mainStage = stage;
         readStyle();
 
         setDifficulty();
@@ -125,24 +220,30 @@ public class Game extends Application {
         border.setCenter(gridPane);
 
         controller = new Controller(this);
+        settings = new Settings(this, controller);
         Generation generation = new Generation(this, controller);
-        generation.generateGenerationMap(gridPane, stage);
+        generation.generateGenerationMap(gridPane);
 
-        //stage.getIcons().add(new Image("file:pics/easy.png"));
+        Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/flag.png")));
+        stage.getIcons().add(icon);
 
         Scene scene = new Scene(border, sceneWidth, sceneHeight);
 
         stage.addEventHandler(KeyEvent.KEY_PRESSED, (KeyEvent event) -> {
-            if (event.getCode()==KeyCode.ESCAPE) new Settings(event, this);
-            if (event.getCode()==KeyCode.R) difficulty.restartGame(stage);
+            if (event.getCode() == KeyCode.ESCAPE && !isInSettings) {
+                isInSettings = true;
+                settings.settings.show();
+            }
+            if (event.getCode() == KeyCode.R) difficulty.restartGame(stage);
         });
 
         stage.setResizable(false);
         stage.setScene(scene);
 
 
-
         stage.show();
+
+        stage.setOnCloseRequest(e -> System.exit(1));
     }
 
     /**
@@ -150,8 +251,8 @@ public class Game extends Application {
      */
     private void readStyle() {
         try {
-            in = Files.newBufferedReader(file, Charset.forName("UTF-8"));
-            line = in.readLine();
+            BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8);
+            String line = in.readLine();
 
             while (line != null) {
                 if (line.trim().startsWith("#")) {
@@ -172,20 +273,18 @@ public class Game extends Application {
      */
     public void writeNewStyle() {
         try {
-            out = Files.newBufferedWriter(Paths.get("resources/style.txt"));
-            String data = "";
+            BufferedWriter out = Files.newBufferedWriter(Paths.get("resources/style.txt"));
+            StringBuilder data = new StringBuilder();
 
-            Set styleSet = style.entrySet();
-            Iterator itr = styleSet.iterator();
-            while(itr.hasNext()) {
-                Map.Entry entry = (Map.Entry) itr.next();
-                String key = (String) entry.getKey();
-                String value = (String) entry.getValue();
+            Set<Entry<String, String>> styleSet = style.entrySet();
+            for (Entry<String, String> stringStringEntry : styleSet) {
+                String key = (String) ((Entry) stringStringEntry).getKey();
+                String value = (String) ((Entry) stringStringEntry).getValue();
 
-                data += '#' + key + '\n' + value + '\n';
+                data.append('#').append(key).append('\n').append(value).append('\n');
             }
 
-            out.write(data);
+            out.write(data.toString());
             out.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -197,7 +296,6 @@ public class Game extends Application {
      */
     private void timer() {
         timer = new Text("000");
-        timer.setFill(Paint.valueOf("#fff"));
         timer.setFont(Font.font("Roboto", FontWeight.BOLD, 14));
         timeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> change(timer)));
         timeline.setCycleCount(Timeline.INDEFINITE);
@@ -206,6 +304,7 @@ public class Game extends Application {
 
     /**
      * changes the timer text every second
+     *
      * @param text changing text
      */
     void change(Text text) {
@@ -218,46 +317,46 @@ public class Game extends Application {
             mins++;
             secs = 0;
         }*/
-        text.setText((((secs/100) == 0) ? "00" : "") + secs++);
+        text.setText((((secs / 100) == 0) ? "00" : "") + secs++);
         //(((mins/10) == 0) ? "0" : "") + mins + ":"
         //                +
         //+ ":"
         //+ (((millis/10) == 0) ? "00" : (((millis/100) == 0) ? "0" : "")) + millis++);
+
+        //System.out.println(timer.getText());
     }
 
     /**
      * defines the attributes for the difficulties
      */
     public void setDifficulty() {
-        //PopUpFx.readLine("Difficulty Level: easy/medium/hard");
         int butSizeE = Integer.parseInt(style.get("Button Size Easy"));
         int butSizeM = Integer.parseInt(style.get("Button Size Medium"));
         int butSizeH = Integer.parseInt(style.get("Button Size Hard"));
 
         switch (difficultyString.toLowerCase(Locale.ROOT).trim()) {
-            case "easy":
+            case "easy" -> {
                 rowLength = 8;
                 colLength = 10;
                 bombNum = 10;
-                sceneWidth = butSizeE*colLength;
-                sceneHeight = butSizeE*rowLength+55;
-                break;
-            case "medium":
+                sceneWidth = butSizeE * colLength;
+                sceneHeight = butSizeE * rowLength + 55;
+            }
+            case "medium" -> {
                 rowLength = 14;
                 colLength = 18;
                 bombNum = 40;
-                sceneWidth = butSizeM*colLength;
-                sceneHeight = butSizeM*rowLength+55;
-                break;
-            case "hard":
+                sceneWidth = butSizeM * colLength;
+                sceneHeight = butSizeM * rowLength + 55;
+            }
+            case "hard" -> {
                 rowLength = 20;
                 colLength = 25;
                 bombNum = 99;
-                sceneWidth = butSizeH*colLength;
-                sceneHeight = butSizeH*rowLength+55;
-                break;
-            default:
-                throw new IllegalArgumentException("Error at: " + difficulty + " illegal difficulty.");
+                sceneWidth = butSizeH * colLength;
+                sceneHeight = butSizeH * rowLength + 55;
+            }
+            default -> throw new IllegalArgumentException("Error at: " + difficulty + " illegal difficulty.");
         }
 
         b = new Button[rowLength][colLength];
@@ -265,10 +364,9 @@ public class Game extends Application {
         clickedMap = new boolean[rowLength][colLength];
     }
 
-
     /**
      * sets the a pane containing the difficulty selection
-     * @param stage
+     *
      * @return difficulty pane
      */
     public GridPane setDifficultyPane(Stage stage) {
@@ -277,22 +375,18 @@ public class Game extends Application {
 
 
         Polygon triangle = new Polygon();
-        triangle.getPoints().addAll(new Double[]{
-                size/2, 0.0,
+        triangle.getPoints().addAll(size / 2, 0.0,
                 size, size,
-                0.0, size,
-        });
+                0.0, size);
 
         Rectangle square = new Rectangle(size, size);
 
         Polygon pentagon = new Polygon();
-        pentagon.getPoints().addAll(new Double[]{
-                0.0, 0.0,
-                size/2, size/2.75,
-                size/2.75, size,
-                -size/2.75, size,
-                -size/2, size/2.75,
-        });
+        pentagon.getPoints().addAll(0.0, 0.0,
+                size / 2, size / 2.75,
+                size / 2.75, size,
+                -size / 2.75, size,
+                -size / 2, size / 2.75);
 
         triangle.setFill(Paint.valueOf("#1976d9"));
         square.setFill(Paint.valueOf("#fe8e3c"));
@@ -315,6 +409,7 @@ public class Game extends Application {
 
     /**
      * sets the control (top) pane
+     *
      * @param stage interface
      * @return control pane
      */
@@ -331,18 +426,18 @@ public class Game extends Application {
         controlPane.setPadding(new Insets(10));
         controlPane.setStyle(style.get("Control Pane Background"));
 
-
         return controlPane;
     }
 
     /**
      * sets the information pane containing the bomb counter and timer
+     *
      * @return info pane
      */
     public GridPane setInfoPane() {
         GridPane infoPane = new GridPane();
 
-        Image flagImg = new Image(getClass().getResourceAsStream("pics/flag.png"));
+        Image flagImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/flag.png")));
         ImageView flagImgView = new ImageView(flagImg);
         flagImgView.setFitWidth(20);
         flagImgView.setFitHeight(20);
@@ -353,8 +448,8 @@ public class Game extends Application {
         infoPane.setVgap(10);
         infoPane.setAlignment(Pos.CENTER);
 
-        Image timerImg = new Image(getClass().getResourceAsStream("pics/stopwatch.png"));
-        ImageView timerImgView = new ImageView(timerImg);
+        Image timerImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/stopwatch.png")));
+        timerImgView = new ImageView(timerImg);
         timerImgView.setFitWidth(20);
         timerImgView.setFitHeight(20);
 
@@ -362,31 +457,25 @@ public class Game extends Application {
         infoPane.add(timerImgView, 1, 0);
         infoPane.add(timer, 2, 0);
 
-        bombsLeftText.setStyle("-fx-text-fill: #fff");
+
+        int[] invertedColor = getInvertedBackground(style.get("Control Pane Background"));
+
+        bombsLeftText.setStyle("-fx-text-fill: " + "rgb(" + Arrays.toString(invertedColor).substring(1, Arrays.toString(invertedColor).length() - 1) + ")");
+        timer.setFill(Color.rgb(invertedColor[0], invertedColor[1], invertedColor[2]));
 
         return infoPane;
     }
 
     /**
      * sets a pane containing the restart button
-     * @param stage
+     *
      * @return restart pane
      */
     public GridPane setRestartPane(Stage stage) {
         GridPane restartPane = new GridPane();
         int imgSize = 30;
 
-        Image restartImg = new Image(getClass().getResourceAsStream("pics/restart.png"));
-        ImageView restartImgView = new ImageView(restartImg);
-        restartImgView.setFitWidth(imgSize);
-        restartImgView.setFitHeight(imgSize);
-
-        Button restart = new Button();
-        restart.setGraphic(restartImgView);
-        restart.setOnAction(e -> difficulty.restartGame(stage));
-        restart.setFont(Font.font("Roboto", FontWeight.BOLD, 14));
-        restart.setPadding(new Insets(2));
-        restart.setStyle("-fx-background-color: transparent; -fx-text-fill: #303030; -fx-border-color: transparent");
+        Button restart = restartButton(stage, imgSize);
 
 
         restartPane.setAlignment(Pos.CENTER);
@@ -397,34 +486,54 @@ public class Game extends Application {
         return restartPane;
     }
 
+    /**
+     * makes a restart button
+     *
+     * @param stage   current stage
+     * @param imgSize size of the button
+     * @return a restart button
+     */
+    private Button restartButton(Stage stage, int imgSize) {
+        Image restartImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/restart.png")));
+        ImageView restartImgView = new ImageView(restartImg);
+        restartImgView.setFitWidth(imgSize);
+        restartImgView.setFitHeight(imgSize);
+
+        Button restart = new Button();
+        restart.setGraphic(restartImgView);
+        restart.setOnAction(e -> difficulty.restartGame(stage));
+        restart.setFont(Font.font("Roboto", FontWeight.BOLD, 14));
+        restart.setPadding(new Insets(2));
+        restart.setStyle("-fx-background-color: transparent; -fx-text-fill: #303030; -fx-border-color: transparent");
+        return restart;
+    }
 
     /**
      * defines what happens on a loss (when clicking on a bomb)
      * can´t click any more tiles or place flags
      * stops the timer
+     *
      * @param clickedButton the bomb that was clicked
      */
     public void lossAlert(Button clickedButton) {
         isAlive = false;
         timeline.stop();
+        timeline = null;
+
         clickedButton.setText("");
-        //Alert lossAlert = new Alert(Alert.AlertType.CONFIRMATION);
-        //lossAlert.setContentText("You lost! \nWappler");
-        //lossAlert.showAndWait();
-        //clickedButton.setTextFill(Paint.valueOf("ff0000"));
 
         for (int r = 0; r < intMap.length; r++) {
             for (int c = 0; c < intMap[r].length; c++) {
-                int red = (int)(Math.random() * ((255 - 1) + 1));
-                int green = (int)(Math.random() * ((255 - 1) + 1));
-                int blue = (int)(Math.random() * ((255 - 1) + 1));
+                int red = (int) (Math.random() * ((255 - 1) + 1));
+                int green = (int) (Math.random() * ((255 - 1) + 1));
+                int blue = (int) (Math.random() * ((255 - 1) + 1));
 
-                if (intMap[r][c] == -1 && b[r][c].getText()!="F") {
+                if (intMap[r][c] == -1 && !b[r][c].getText().equals("F")) {
                     Button mine = b[r][c];
                     mine.setTextFill(Paint.valueOf("000"));
                     mine.setStyle("-fx-background-radius: 0; -fx-background-color: rgb(" + red + "," + green + "," + blue + ")");
-                    mine.setGraphic(new Circle(Integer.parseInt(style.get("Button Size "+difficultyString))/4,
-                            Paint.valueOf("rgb(" + (red-50) + "," + (green-50) + "," + (blue-50) + ")")));
+                    mine.setGraphic(new Circle(Integer.parseInt(style.get("Button Size " + difficultyString)) >> 2,
+                            Paint.valueOf("rgb(" + (red - 50) + "," + (green - 50) + "," + (blue - 50) + ")")));
                     mine.setPadding(new Insets(1, 1, 1, 1));
                 }
             }
@@ -437,66 +546,79 @@ public class Game extends Application {
      * stops the timer
      */
     public void winAlert() {
-        int size = 100;
         isAlive = false;
         timeline.stop();
-        Alert winAlert = new Alert(Alert.AlertType.CONFIRMATION);
-
 
         try {
             int score = Integer.parseInt(timer.getText().replace(":", ""));
 
-            if (difficultyString.equalsIgnoreCase("Easy")) setHighscoreEasy(score);;
+            if (difficultyString.equalsIgnoreCase("Easy")) setHighscoreEasy(score);
             if (difficultyString.equalsIgnoreCase("Medium")) setHighscoreMedium(score);
             if (difficultyString.equalsIgnoreCase("Hard")) setHighscoreHard(score);
 
-
-            setWinStage(size);
-
-            /*
-            winAlert.setContentText("YOU WON!\n" +
-                    "Your Time: " + score + "\n" +
-                    "Your Best: " + highscore);
-            winAlert.showAndWait();
-             */
+            setWinStage();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void setWinStage(int size) {
-        Stage winStage = new Stage();
-        HBox box = new HBox();
+    /**
+     * makes a new stage on a win
+     */
+    private void setWinStage() {
+        int width = 200;
+        int height = 130;
+        VBox vBox = new VBox();
+        HBox row1 = new HBox();
+        HBox row2 = new HBox();
 
-        box.setPadding(new Insets(10));
+        vBox.setStyle(style.get("Control Pane Background"));
+        vBox.setPadding(new Insets(30));
 
-        Image timerImg = new Image(getClass().getResourceAsStream("pics/stopwatch.png"));
+        row1.setPadding(new Insets(10));
+
+        Image timerImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/stopwatch.png")));
         ImageView timerImgView = new ImageView(timerImg);
         timerImgView.setFitWidth(20);
         timerImgView.setFitHeight(20);
 
+        Image trophyImg = new Image(Objects.requireNonNull(getClass().getResourceAsStream("pics/trophy.png")));
+        ImageView trophyImgView = new ImageView(trophyImg);
+        trophyImgView.setFitWidth(20);
+        trophyImgView.setFitHeight(20);
+
         Text score = new Text(timer.getText());
-        score.setFill(Paint.valueOf("000"));
+        score.setFill(Paint.valueOf("fff"));
         score.setFont(Font.font("Roboto", FontWeight.BOLD, 14));
 
 
         Label highscoreLabel = new Label("" + highscore);
+        highscoreLabel.setTextFill(Paint.valueOf("fff"));
         highscoreLabel.setFont(Font.font("Roboto", FontWeight.BOLD, 14));
 
 
-        box.setStyle(style.get("Top Background"));
-        box.setSpacing(10);
-        box.getChildren().addAll(timerImgView, score, highscoreLabel);
+        row1.setStyle(style.get("Top Background"));
+        row1.setSpacing(10);
+        row1.getChildren().addAll(timerImgView, score, trophyImgView, highscoreLabel);
 
-        Scene winScene = new Scene(box, size, size);
+        row2.getChildren().addAll(new Label(""), restartButton(winStage, 20));
+
+        row2.setSpacing(50);
+        vBox.getChildren().addAll(row1, row2);
+
+        Scene winScene = new Scene(vBox, width, height);
+
+        winStage.getIcons().add(trophyImg);
+
+        winStage.setResizable(false);
         winStage.setScene(winScene);
         winStage.show();
     }
 
     /**
      * writes the new highscore of the easy difficulty in the corresponding file
+     *
      * @param score the current score
-     * @throws IOException
      */
     private void setHighscoreEasy(int score) throws IOException {
         BufferedReader highscoreIn = Files.newBufferedReader(Paths.get("resources/highscoreEasy.txt"));
@@ -504,17 +626,17 @@ public class Game extends Application {
 
         highscore = Integer.parseInt(line);
 
-        if (score < highscore || highscore ==0) {
+        if (score < highscore || highscore == 0) {
             BufferedWriter highscoreOut = Files.newBufferedWriter(Paths.get("resources/highscoreEasy.txt"));
-            highscoreOut.write(score+"");
+            highscoreOut.write(score + "");
             highscoreOut.close();
         }
     }
 
     /**
      * writes the new highscore of the medium difficulty in the corresponding file
+     *
      * @param score the current score
-     * @throws IOException
      */
     private void setHighscoreMedium(int score) throws IOException {
         BufferedReader highscoreIn = Files.newBufferedReader(Paths.get("resources/highscoreMedium.txt"));
@@ -522,17 +644,17 @@ public class Game extends Application {
 
         highscore = Integer.parseInt(line);
 
-        if (score < highscore || highscore ==0) {
+        if (score < highscore || highscore == 0) {
             BufferedWriter highscoreOut = Files.newBufferedWriter(Paths.get("resources/highscoreMedium.txt"));
-            highscoreOut.write(score+"");
+            highscoreOut.write(score + "");
             highscoreOut.close();
         }
     }
 
     /**
      * writes the new highscore of the hard difficulty in the corresponding file
+     *
      * @param score the current score
-     * @throws IOException
      */
     private void setHighscoreHard(int score) throws IOException {
         BufferedReader highscoreIn = Files.newBufferedReader(Paths.get("resources/highscoreHard.txt"));
@@ -540,19 +662,31 @@ public class Game extends Application {
 
         highscore = Integer.parseInt(line);
 
-        if (score < highscore || highscore ==0) {
+        if (score < highscore || highscore == 0) {
             BufferedWriter highscoreOut = Files.newBufferedWriter(Paths.get("resources/highscoreHard.txt"));
-            highscoreOut.write(score+"");
+            highscoreOut.write(score + "");
             highscoreOut.close();
         }
     }
 
-
     /**
-     * launches the game
-     * @param args
+     * calculates the inverted color of the style
+     * @param style color to be inverted
+     * @return inverted color values as int array
      */
-    public static void main(String[] args) {
-        launch(args);
+    public int[] getInvertedBackground(String style) {
+        StringBuilder stripped = new StringBuilder();
+
+        for (char ch : style.toCharArray()) {
+            if (Character.isDigit(ch) || ch == ',' || ch == '.') stripped.append(ch);
+        }
+
+        String[] split = stripped.toString().split(",");
+
+        int r = (int) (255 - Double.parseDouble(split[0]));
+        int g = (int) (255 - Double.parseDouble(split[1]));
+        int b = (int) (255 - Double.parseDouble(split[2]));
+
+        return new int[]{r, g, b};
     }
 }

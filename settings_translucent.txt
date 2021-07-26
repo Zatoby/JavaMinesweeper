@@ -1,0 +1,738 @@
+package game;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.embed.swing.SwingFXUtils;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
+import javafx.scene.effect.BoxBlur;
+import javafx.scene.effect.Effect;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.util.Duration;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+public class Settings {
+
+
+    private static final double BLUR_AMOUNT = 10;
+
+    private static final Effect frostEffect =
+            new BoxBlur(BLUR_AMOUNT, BLUR_AMOUNT, 3);
+
+    private static final ImageView background = new ImageView();
+    private static final StackPane layout = new StackPane();
+
+
+    /**
+     * defines the game
+     */
+    private Game game;
+    /**
+     * defines the controller
+     */
+    private Controller controller;
+
+    /**
+     * width of the settings menu
+     */
+    private int sceneWidth = 350;
+    /**
+     * height of the settings menu
+     */
+    private int sceneHeight = 500;
+
+
+    /**
+     * settings stage
+     */
+    public Stage settings;
+    /**
+     * root pane
+     */
+    private BorderPane border;
+    /**
+     * pane for selection of tabs
+     */
+    private HBox menuPane = new HBox();
+    /**
+     * button style tab
+     */
+    private VBox buttonPane = new VBox();
+    /**
+     * top style tab
+     */
+    private VBox topPane = new VBox();
+
+    /**
+     * settings file reader
+     */
+    private BufferedReader settingsIn;
+    /**
+     * settings file writer
+     */
+    private BufferedWriter settingsOut;
+
+    /**
+     * values of sliders, checkboxes etc.
+     */
+    private Map<String, String> settingMap = new TreeMap<>();
+    /**
+     * style map
+     */
+    private Map<String, String> style;
+
+    /**
+     * rgb sliders color 1 non-clicked buttons
+     */
+    private Slider slidR1 = new Slider(), slidG1 = new Slider(), slidB1 = new Slider();
+    /**
+     * rgb sliders color 2 non-clicked buttons
+     */
+    private Slider slidR2 = new Slider(), slidG2 = new Slider(), slidB2 = new Slider();
+
+    /**
+     * rgb sliders color 1 clicked buttons
+     */
+    private Slider slidR1C = new Slider(), slidG1C = new Slider(), slidB1C = new Slider();
+    /**
+     * rgb sliders color 2 clicked buttons
+     */
+    private Slider slidR2C = new Slider(), slidG2C = new Slider(), slidB2C = new Slider();
+
+    /**
+     * rgb slider top color
+     */
+    private Slider slidRT = new Slider(), slidGT = new Slider(), slidBT = new Slider();
+
+    /**
+     * adjusts volume of game sounds
+     */
+    public Slider volumeSlider = new Slider();
+
+    /**
+     * map of all sliders
+     */
+    private Map<String, Slider> sliderMap = new TreeMap<>();
+
+
+    /**
+     * puts all sliders in a map
+     */
+    private void fillSliderMap() {
+        sliderMap.put("slidR1", slidR1);
+        sliderMap.put("slidG1", slidG1);
+        sliderMap.put("slidB1", slidB1);
+
+        sliderMap.put("slidR2", slidR2);
+        sliderMap.put("slidG2", slidG2);
+        sliderMap.put("slidB2", slidB2);
+
+
+        sliderMap.put("slidR1C", slidR1C);
+        sliderMap.put("slidG1C", slidG1C);
+        sliderMap.put("slidB1C", slidB1C);
+
+        sliderMap.put("slidR2C", slidR2C);
+        sliderMap.put("slidG2C", slidG2C);
+        sliderMap.put("slidB2C", slidB2C);
+
+        sliderMap.put("slidRT", slidRT);
+        sliderMap.put("slidGT", slidGT);
+        sliderMap.put("slidBT", slidBT);
+    }
+
+
+    /**
+     * Constructor for settings
+     * @param game
+     */
+    public Settings(Game game, Controller controller) {
+        this.game = game;
+        this.style = game.style;
+        this.controller = controller;
+
+        Button mainStyleButtons = new Button("Original"), mainStyleTop = new Button("Original");
+        Button saveButtons = new Button("Save"), saveTop = new Button("Save");
+        Button buttonStyle = new Button("Button Style"), topStyle = new Button("Top Style");
+
+        fillSliderMap();
+        readSettings();
+        setPanes();
+
+        setSliders(slidR1, slidG1, slidB1);
+        setSliders(slidR2, slidG2, slidB2);
+        setSliders(slidR1C, slidG1C, slidB1C);
+        setSliders(slidR2C, slidG2C, slidB2C);
+
+
+        menuPane.getChildren().addAll(buttonStyle, topStyle);
+        addToButtonPane(buttonPane, mainStyleButtons, saveButtons);
+        addToTopPane(topPane, mainStyleTop, saveTop);
+
+        setSave(saveButtons, "Buttons");
+        setSave(saveTop, "Top");
+
+        //Scene settingScene = new Scene(border, sceneWidth, sceneHeight);
+
+        layout.getChildren().setAll(background, createContent());
+        layout.setStyle("-fx-background-color: null");
+        layout.getChildren().add(border);
+        //new Scene(border, sceneWidth, sceneHeight);
+        Scene settingScene = new Scene(
+                layout,
+                sceneWidth, sceneHeight,
+                Color.TRANSPARENT
+        );
+
+        settings.setOnCloseRequest(e -> game.isInSettings = false);
+        settings.setScene(settingScene);
+
+        settings.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+                if (event.getCode() == KeyCode.ENTER) {
+                    settings.close();
+                }
+            }
+        );
+
+        mainStyleButtons.setOnMouseClicked(e -> setMainStyleButtons());
+        mainStyleTop.setOnMouseClicked(e -> setMainStyleTop());
+        buttonStyle.setOnMouseClicked(e -> border.setCenter(buttonPane));
+        topStyle.setOnMouseClicked(e -> border.setCenter(topPane));
+
+
+        setSliderValues();
+
+
+
+        Platform.setImplicitExit(false);
+
+        settingScene.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) Platform.exit();
+        });
+        makeSmoke(settings);
+
+        settings.initStyle(StageStyle.TRANSPARENT);
+        settings.setScene(settingScene);
+        settings.show();
+
+        background.setImage(copyBackground(settings));
+        background.setEffect(frostEffect);
+
+        makeDraggable(settings, layout);
+
+        //border.setStyle("-fx-background-color: transparent");
+        //settings.initStyle(StageStyle.TRANSPARENT);
+        //settingScene.setFill(Color.TRANSPARENT);
+    }
+
+    /**
+     * adds elements to the pane for the top settings
+     * @param topPane
+     * @param mainStyle
+     * @param save
+     */
+    private void addToTopPane(VBox topPane, Button mainStyle, Button save) {
+        Button colorPreview = new Button();
+        CheckBox hideTimer = new CheckBox("Hide Timer");
+        CheckBox hideBombsLeft = new CheckBox("Hide Bombs Left");
+
+        hideTimer.setSelected(!Boolean.parseBoolean(settingMap.get("hideTimer")));
+        hideBombsLeft.setSelected(!Boolean.parseBoolean(settingMap.get("hideBombsLeft")));
+
+        setVisibility(!hideTimer.isSelected(), game.timer, game.timerImgView);
+        setVisibility(!hideBombsLeft.isSelected(), game.bombsLeftText, controller.flagImgView);
+
+
+        colorPreview.setMinSize(30, 30);
+
+        topPane.getChildren().addAll(sliderBox("Red", slidRT, false, colorPreview),
+                                        sliderBox("Green", slidGT, true, colorPreview),
+                                        sliderBox("Blue", slidBT, false, colorPreview));
+
+        topPane.getChildren().addAll(hideTimer, hideBombsLeft);
+
+        topPane.getChildren().add(volumeSlider);
+        volumeSlider.setMax(3);
+        volumeSlider.setValue(Double.parseDouble(settingMap.get("volumeSlider")));
+
+        topPane.getChildren().add(save);
+
+
+        hideTimer.selectedProperty().addListener((ov, old_val, new_val) -> {
+            settingMap.put("hideTimer", old_val+"");
+            setVisibility(old_val, game.timer, game.timerImgView);
+        });
+        hideBombsLeft.selectedProperty().addListener((ov, old_val, new_val) -> {
+            settingMap.put("hideBombsLeft", old_val+"");
+            setVisibility(old_val, game.bombsLeftText, controller.flagImgView);
+        });
+
+
+        setSliders(slidRT, slidGT, slidBT);
+        previewColor(colorPreview, slidRT, "top");
+        previewColor(colorPreview, slidGT, "top");
+        previewColor(colorPreview, slidBT, "top");
+    }
+
+    public void setVisibility(Boolean value, Node text, Node pic) {
+        try {
+            text.setVisible(value);
+            pic.setVisible(value);
+        } catch (NullPointerException e) {}
+    }
+
+    private HBox sliderBox(String color, Slider slider, boolean isPreview, Button preview) {
+        HBox sliderBox = new HBox();
+
+        if (isPreview) {
+            sliderBox.getChildren().addAll(new Label(color), slider, preview);
+        } else {
+            sliderBox.getChildren().addAll(new Label(color), slider);
+        }
+
+        sliderBox.setSpacing(20);
+        sliderBox.setAlignment(Pos.CENTER_LEFT);
+
+        return sliderBox;
+    }
+
+    private void addToButtonPane(VBox buttonPane, Button mainStyle, Button save) {
+        Label color1 = new Label("\nColor 1"), color2 = new Label("\nColor 2");
+        Label color1Clicked = new Label("\nColor 1 Clicked"), color2Clicked = new Label("\nColor 2 Clicked");
+
+        Label divider = new Label("--------------------------------------------------------------------------------");
+
+        Button colorPreview1 = new Button(), colorPreview2 = new Button();
+
+        /*Image saveImg = new Image(getClass().getResourceAsStream("pics/save.png"));
+        ImageView saveImgView = new ImageView(saveImg);
+        saveImgView.setFitWidth(20);
+        saveImgView.setFitHeight(20);*/
+
+        colorPreview1.setMinSize(30, 30);
+        colorPreview2.setMinSize(30, 30);
+
+        buttonPane.getChildren().add(mainStyle);
+
+        buttonPane.getChildren().addAll(sliderBox("Red", slidR1, false, colorPreview1),
+                                        sliderBox("Green", slidG1, true, colorPreview1),
+                                        sliderBox("Blue", slidB1, false, colorPreview1));
+
+        buttonPane.getChildren().addAll(sliderBox("Red", slidR2, false, colorPreview2),
+                                        sliderBox("Green", slidG2, true, colorPreview2),
+                                        sliderBox("Blue", slidB2, false, colorPreview2));
+
+        buttonPane.getChildren().add(save);
+
+
+        buttonPane.getChildren().add(divider);
+
+
+        Button saveClicked = new Button("Save");
+        Button colorPreview1Clicked = new Button(), colorPreview2Clicked = new Button();
+
+        colorPreview2Clicked.setMinSize(30, 30);
+        colorPreview1Clicked.setMinSize(30, 30);
+
+        buttonPane.getChildren().addAll(sliderBox("Red", slidR1C, false, colorPreview1Clicked),
+                                        sliderBox("Green", slidG1C, true, colorPreview1Clicked),
+                                        sliderBox("Blue", slidB1C, false, colorPreview1Clicked));
+
+        buttonPane.getChildren().addAll(sliderBox("Red", slidR2C, false, colorPreview2Clicked),
+                                        sliderBox("Green", slidG2C, true, colorPreview2Clicked),
+                                        sliderBox("Blue", slidB2C, false, colorPreview2Clicked));
+
+        buttonPane.getChildren().add(saveClicked);
+
+
+        previewColor(colorPreview1, slidR1, "buttons1");
+        previewColor(colorPreview1, slidG1, "buttons1");
+        previewColor(colorPreview1, slidB1, "buttons1");
+        previewColor(colorPreview2, slidR2, "buttons2");
+        previewColor(colorPreview2, slidG2, "buttons2");
+        previewColor(colorPreview2, slidB2, "buttons2");
+        previewColor(colorPreview1Clicked, slidR1C, "buttons1Clicked");
+        previewColor(colorPreview1Clicked, slidG1C, "buttons1Clicked");
+        previewColor(colorPreview1Clicked, slidB1C, "buttons1Clicked");
+        previewColor(colorPreview2Clicked, slidR2C, "buttons2Clicked");
+        previewColor(colorPreview2Clicked, slidG2C, "buttons2Clicked");
+        previewColor(colorPreview2Clicked, slidB2C, "buttons2Clicked");
+
+        setSave(save, "Buttons");
+        setSave(saveClicked, "ButtonsClicked");
+    }
+
+    private void setSliderValues() {
+        Set sliderSet = sliderMap.entrySet();
+        Iterator itr = sliderSet.iterator();
+        while(itr.hasNext()) {
+            Map.Entry entry = (Map.Entry) itr.next();
+            String key = (String) entry.getKey();
+            Slider value = (Slider) entry.getValue();
+
+            value.setValue(Double.parseDouble(settingMap.get(key)));
+        }
+    }
+
+    private void setSave(Button save, String type) {
+        if (type.equals("Buttons")) {
+            save.setOnMouseClicked(e -> setButtonStyle(
+                    slidR1.getValue() + "," + slidG1.getValue() + "," + slidB1.getValue(),
+                    slidR2.getValue() + "," + slidG2.getValue() + "," + slidB2.getValue(),
+                    false
+            ));
+        } else if (type.equals("ButtonsClicked")) {
+            save.setOnMouseClicked(e -> setButtonStyle(
+                    slidR1C.getValue() + "," + slidG1C.getValue() + "," + slidB1C.getValue(),
+                    slidR2C.getValue() + "," + slidG2C.getValue() + "," + slidB2C.getValue(),
+                    true
+            ));
+        } else if (type.equals("Top")) {
+            save.setOnMouseClicked(e -> {
+                controller.clickPlayer.setVolume(volumeSlider.getValue());
+                settingMap.put("volumeSlider", volumeSlider.getValue()+"");
+                setTopStyle(slidRT.getValue() + "," + slidGT.getValue() + "," + slidBT.getValue());
+            });
+        }
+    }
+
+    private void setPanes() {
+        settings = new Stage();
+        border = new BorderPane();
+        border.setTop(menuPane);
+        border.setCenter(buttonPane);
+        buttonPane.setPadding(new Insets(10,  10, 10, 10));
+    }
+
+    private void setSliders(Slider red, Slider green, Slider blue) {
+        red.setMin(0);
+        red.setMax(255);
+        red.setValue(0);
+
+        green.setMin(0);
+        green.setMax(255);
+        green.setValue(0);
+
+        blue.setMin(0);
+        blue.setMax(255);
+        blue.setValue(0);
+    }
+
+    private void setButtonStyle(String color1, String color2, boolean isClicked) {
+        if (isClicked) {
+            style.put("Button 1 Clicked", "-fx-background-radius: 0; -fx-background-color: rgb(" + color1 + ")");
+            style.put("Button 2 Clicked", "-fx-background-radius: 0; -fx-background-color: rgb(" + color2 + ")");
+
+            settingMap.put("slidR1C", ""+ slidR1C.getValue());
+            settingMap.put("slidG1C", ""+ slidG1C.getValue());
+            settingMap.put("slidB1C", ""+ slidB1C.getValue());
+            settingMap.put("slidR2C", ""+ slidR2C.getValue());
+            settingMap.put("slidG2C", ""+ slidG2C.getValue());
+        } else {
+            style.put("Button 1", "-fx-background-radius: 0; -fx-background-color: rgb(" + color1 + ")");
+            style.put("Button 2", "-fx-background-radius: 0; -fx-background-color: rgb(" + color2 + ")");
+
+            settingMap.put("slidR1", ""+ slidR1.getValue());
+            settingMap.put("slidG1", ""+ slidG1.getValue());
+            settingMap.put("slidB1", ""+ slidB1.getValue());
+            settingMap.put("slidR2", ""+ slidR2.getValue());
+            settingMap.put("slidG2", ""+ slidG2.getValue());
+            settingMap.put("slidB2", ""+ slidB2.getValue());
+        }
+
+
+        for (int r = 0; r < game.rowLength; r++) {
+            for (int c = 0; c < game.colLength; c++) {
+                Button currBut = game.b[r][c];
+                if (game.clickedMap[r][c]) {
+                    if ((r+c) % 2 == 0) {
+                        currBut.setStyle(style.get("Button 1 Clicked"));
+                    } else {
+                        currBut.setStyle(style.get("Button 2 Clicked"));
+                    }
+                } else {
+                    if ((r+c) % 2 == 0) {
+                        currBut.setStyle(style.get("Button 1"));
+                    } else {
+                        currBut.setStyle(style.get("Button 2"));
+                    }
+                }
+
+            }
+        }
+
+        game.writeNewStyle();
+        writeSettings();
+    }
+
+    private void setTopStyle(String color) {
+        String newColor = "-fx-background-color: rgb(" + color + ")";
+
+        style.put("Control Pane Background", newColor);
+
+        settingMap.put("Slider Red Control", ""+ slidRT.getValue());
+        settingMap.put("Slider Green Control", ""+ slidGT.getValue());
+        settingMap.put("Slider Blue Control", ""+ slidBT.getValue());
+
+        game.controlPane.setStyle(newColor);
+
+        game.writeNewStyle();
+        writeSettings();
+    }
+
+    private void setMainStyleButtons() {
+        style.put("Button 1", "-fx-background-radius: 0; -fx-background-color: #aad751");
+        style.put("Button 2", "-fx-background-radius: 0; -fx-background-color: #a2d149");
+        style.put("Button 1 Clicked", "-fx-background-radius: 0; -fx-background-color: #e5c29f");
+        style.put("Button 2 Clicked", "-fx-background-radius: 0; -fx-background-color: #d7b899");
+
+        for (int r = 0; r < game.rowLength; r++) {
+            for (int c = 0; c < game.colLength; c++) {
+                Button currBut = game.b[r][c];
+                if (game.clickedMap[r][c]) {
+                    if ((r+c) % 2 == 0) {
+                        currBut.setStyle(style.get("Button 1 Clicked"));
+                    } else {
+                        currBut.setStyle(style.get("Button 2 Clicked"));
+                    }
+                } else {
+                    if ((r+c) % 2 == 0) {
+                        currBut.setStyle(style.get("Button 1"));
+                    } else {
+                        currBut.setStyle(style.get("Button 2"));
+                    }
+                }
+
+            }
+        }
+
+        game.writeNewStyle();
+    }
+
+    private void setMainStyleTop() {
+        style.put("Control Pane Background", "-fx-background-color: #4a752c");
+
+        game.controlPane.setStyle("-fx-background-color: #4a752c");
+
+        game.writeNewStyle();
+    }
+
+    private void previewColor(Button colorPreview, Slider slider, String type) {
+        switch (type) {
+            case "buttons1":
+                colorPreview.setStyle("-fx-background-color: rgb(" +
+                        slidR1.getValue() + "," + slidG1.getValue() + "," + slidB1.getValue() + ")");
+
+                slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                        colorPreview.setStyle("-fx-background-color: rgb(" +
+                                slidR1.getValue() + "," + slidG1.getValue() + "," + slidB1.getValue() + ")"));
+                break;
+            case "buttons2":
+                colorPreview.setStyle("-fx-background-color: rgb(" +
+                        slidR2.getValue() + "," + slidG2.getValue() + "," + slidB2.getValue() + ")");
+
+                slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                        colorPreview.setStyle("-fx-background-color: rgb(" +
+                                slidR2.getValue() + "," + slidG2.getValue() + "," + slidB2.getValue() + ")"));
+                break;
+            case "buttons1Clicked":
+                colorPreview.setStyle("-fx-background-color: rgb(" +
+                        slidR1C.getValue() + "," + slidG1C.getValue() + "," + slidB1C.getValue() + ")");
+
+                slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                        colorPreview.setStyle("-fx-background-color: rgb(" +
+                                slidR1C.getValue() + "," + slidG1C.getValue() + "," + slidB1C.getValue() + ")"));
+                break;
+            case "buttons2Clicked":
+                colorPreview.setStyle("-fx-background-color: rgb(" +
+                        slidR2C.getValue() + "," + slidG2C.getValue() + "," + slidB2C.getValue() + ")");
+
+                slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                        colorPreview.setStyle("-fx-background-color: rgb(" +
+                                slidR2C.getValue() + "," + slidG2C.getValue() + "," + slidB2C.getValue() + ")"));
+                break;
+            case "top":
+                colorPreview.setStyle("-fx-background-color: rgb(" +
+                        slidRT.getValue() + "," + slidGT.getValue() + "," + slidBT.getValue() + ")");
+
+                slider.valueProperty().addListener((observable, oldValue, newValue) ->
+                        colorPreview.setStyle("-fx-background-color: rgb(" +
+                                slidRT.getValue() + "," + slidGT.getValue() + "," + slidBT.getValue() + ")"));
+                break;
+        }
+    }
+
+
+    private void readSettings() {
+        try {
+            settingsIn = Files.newBufferedReader(Paths.get("resources/settings.txt"), Charset.forName("UTF-8"));
+            String line = settingsIn.readLine();
+
+            while (line != null) {
+                if (line.trim().startsWith("#")) {
+                    String key = line.substring(1).trim();
+                    line = settingsIn.readLine();
+
+                    settingMap.put(key, line);
+                }
+                line = settingsIn.readLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void writeSettings() {
+        try {
+            settingsOut = Files.newBufferedWriter(Paths.get("resources/settings.txt"));
+            String data = "";
+
+            Set styleSet = settingMap.entrySet();
+            Iterator itr = styleSet.iterator();
+            while(itr.hasNext()) {
+                Map.Entry entry = (Map.Entry) itr.next();
+                String key = (String) entry.getKey();
+                String value = (String) entry.getValue();
+
+                data += '#' + key + '\n' + value + '\n';
+            }
+
+            settingsOut.write(data);
+            settingsOut.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+    // copy a background node to be frozen over.
+    private Image copyBackground(Stage stage) {
+        final int X = (int) stage.getX();
+        final int Y = (int) stage.getY();
+        final int W = (int) stage.getWidth();
+        final int H = (int) stage.getHeight();
+
+        try {
+            java.awt.Robot robot = new java.awt.Robot();
+            java.awt.image.BufferedImage image = robot.createScreenCapture(new java.awt.Rectangle(X, Y, W, H));
+
+            return SwingFXUtils.toFXImage(image, null);
+        } catch (java.awt.AWTException e) {
+            System.out.println("The robot of doom strikes!");
+            e.printStackTrace();
+
+            return null;
+        }
+    }
+
+    // create some content to be displayed on top of the frozen glass panel.
+    private Label createContent() {
+      Label label = new Label("");
+
+        return label;
+    }
+
+    // makes a stage draggable using a given node.
+    public void makeDraggable(final Stage stage, final Node byNode) {
+        final game.FrostyTech.Delta dragDelta = new game.FrostyTech.Delta();
+        byNode.setOnMousePressed(mouseEvent -> {
+            // record a delta distance for the drag and drop operation.
+            dragDelta.x = stage.getX() - mouseEvent.getScreenX();
+            dragDelta.y = stage.getY() - mouseEvent.getScreenY();
+            byNode.setCursor(Cursor.MOVE);
+        });
+        final BooleanProperty inDrag = new SimpleBooleanProperty(false);
+
+        byNode.setOnMouseReleased(mouseEvent -> {
+            byNode.setCursor(Cursor.HAND);
+
+            if (inDrag.get()) {
+                stage.hide();
+
+                Timeline pause = new Timeline(new KeyFrame(Duration.millis(50), event -> {
+                    background.setImage(copyBackground(stage));
+                    layout.getChildren().set(
+                            0,
+                            background
+                    );
+                    stage.show();
+                }));
+                pause.play();
+            }
+
+            inDrag.set(false);
+        });
+        byNode.setOnMouseDragged(mouseEvent -> {
+            stage.setX(mouseEvent.getScreenX() + dragDelta.x);
+            stage.setY(mouseEvent.getScreenY() + dragDelta.y);
+
+            layout.getChildren().set(
+                    0,
+                    makeSmoke(stage)
+            );
+
+            inDrag.set(true);
+        });
+        byNode.setOnMouseEntered(mouseEvent -> {
+            if (!mouseEvent.isPrimaryButtonDown()) {
+                byNode.setCursor(Cursor.HAND);
+            }
+        });
+        byNode.setOnMouseExited(mouseEvent -> {
+            if (!mouseEvent.isPrimaryButtonDown()) {
+                byNode.setCursor(Cursor.DEFAULT);
+            }
+        });
+    }
+
+    private javafx.scene.shape.Rectangle makeSmoke(Stage stage) {
+        return new javafx.scene.shape.Rectangle(
+                stage.getWidth(),
+                stage.getHeight(),
+                Color.WHITESMOKE.deriveColor(
+                        0, 1, 1, 0.08
+                )
+        );
+    }
+
+    /** records relative x and y co-ordinates. */
+    private static class Delta {
+        double x, y;
+    }
+}
