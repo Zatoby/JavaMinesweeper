@@ -1,0 +1,30 @@
+#Slider Blue Color 1
+38.170584689572024
+#Slider Blue Color 1 Clicked
+19.367088607594937
+#Slider Blue Color 2
+22.59493670886076
+#Slider Blue Color 2 Clicked
+22.59493670886076
+#Slider Blue Control
+12.142857142857142
+#Slider Green Color 1
+32.38095238095238
+#Slider Green Color 1 Clicked
+13.013863773357441
+#Slider Green Color 2
+23.517179023508135
+#Slider Green Color 2 Clicked
+14.653405666063895
+#Slider Green Control
+12.142857142857142
+#Slider Red Color 1
+32.38095238095238
+#Slider Red Color 1 Clicked
+15.421940928270043
+#Slider Red Color 2
+21.775165762507534
+#Slider Red Color 2 Clicked
+16.139240506329116
+#Slider Red Control
+12.142857142857142

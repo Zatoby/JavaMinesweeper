@@ -1,0 +1,39 @@
+#Button 1
+-fx-background-radius: 0; -fx-background-color: #aad751
+#Button 2
+-fx-background-radius: 0; -fx-background-color: #a2d149
+
+#Button 1 Clicked
+-fx-background-radius: 0; -fx-background-color: #e5c29f
+#Button 2 Clicked
+-fx-background-radius: 0; -fx-background-color: #d7b899
+
+#Control Pane Background
+-fx-background-color: #4a752c;
+
+#easy Icon
+pics/difficulty/easy.png
+#medium Icon
+pics/difficulty/medium.png
+#hard Icon
+pics/difficulty/hard.png
+
+#restart Icon
+restart.png
+
+#1
+#1976d2
+#2
+#388e3c
+#3
+#d32f2f
+#4
+#7b1fa2
+#5
+#ff8f00
+#6
+#008081
+#7
+#424242
+#8
+#808080
